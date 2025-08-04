@@ -8,7 +8,7 @@ const app = express();
 
 // ✅ Allow only your frontend's domain (Netlify URL)
 app.use(cors({
-  origin: 'https://your-app.netlify.app', // <-- yahan apna frontend URL likhna
+  origin: 'https://amazing-project-by.netlify.app', // <-- yahan apna frontend URL likhna
   methods: ['GET', 'POST'],
   credentials: true,
 }));
@@ -43,3 +43,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
