@@ -1,46 +1,44 @@
+const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
-const WebSocket = require('ws');
-const path = require('path');
-const cors = require('cors'); // ✅ Add this line
 
 const app = express();
-
-// ✅ Allow only your frontend's domain (Netlify URL)
-app.use(cors({
-  origin: 'https://amazing-project-by.netlify.app', // <-- yahan apna frontend URL likhna
-  methods: ['GET', 'POST'],
-  credentials: true,
-}));
-
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-let viewerSocket = null;
+let cameraClient = null;
+const viewers = new Set();
 
-wss.on('connection', (ws, req) => {
-  ws.on('message', (message) => {
-    if (ws.role === 'camera') {
-      if (viewerSocket && viewerSocket.readyState === WebSocket.OPEN) {
-        viewerSocket.send(message);
-      }
-    } else if (message === 'viewer') {
-      ws.role = 'viewer';
-      viewerSocket = ws;
-    } else if (message === 'camera') {
-      ws.role = 'camera';
-    }
-  });
+wss.on('connection', (ws) => {
+    ws.on('message', (message) => {
+        if (message === 'camera') {
+            cameraClient = ws;
+            console.log('Camera client connected');
+        } else if (message === 'viewer') {
+            viewers.add(ws);
+            console.log('Viewer client connected');
+        } else if (cameraClient && ws === cameraClient) {
+            // Forward video frames to all viewers
+            viewers.forEach((viewer) => {
+                if (viewer.readyState === WebSocket.OPEN) {
+                    viewer.send(message);
+                }
+            });
+        }
+    });
 
-  ws.on('close', () => {
-    if (ws === viewerSocket) {
-      viewerSocket = null;
-    }
-  });
+    ws.on('close', () => {
+        if (ws === cameraClient) {
+            cameraClient = null;
+            console.log('Camera client disconnected');
+        } else {
+            viewers.delete(ws);
+            console.log('Viewer client disconnected');
+        }
+    });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
-
